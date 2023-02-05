@@ -178,6 +178,39 @@ end
 -------------
 --- View Code
 -------------
+
+
+-- Turn a time (in seconds), into something like 3 hours, 45 minutes
+local function granulated_string_from_time(time, big_chunk, big_label, little_chunk, little_label)
+    local big = floor(time / big_chunk)
+    local little = floor((time - (big * big_chunk)) / little_chunk)
+    local ret = "" .. big .. " " .. big_label
+    if big > 1 then
+      ret = ret .. "s"
+    end
+    ret = ret .. ", " .. little .. " " .. little_label
+    if little > 1 then
+      ret = ret .. "s"
+    end
+    return ret
+end
+
+-- Turn a time_delta (in seconds) into a string
+local function build_time_delta_string(time_delta)
+  if time_delta > 60 * 60 * 24 then -- More than a day, report days and hours
+    return granulated_string_from_time(time_delta, 60 * 60 * 24, "day", 60 * 60, "hour")
+  elseif time_delta > 60 * 60 then -- More than an hour, report hours and minutes
+    return granulated_string_from_time(time_delta, 60 * 60, "hour", 60, "minute")
+  elseif time_delta > 60 then -- More than a minute, report minutes and seconds
+    return granulated_string_from_time(time_delta, 60, "hour", 1, "second")
+  else -- Just seconds
+    if time_delta > 1 then
+      return "" .. time_delta .. " seconds"
+    end
+    return "" .. time_delta .. " second"
+  end
+end
+
 local function build_tooltip(self)
     self:AddHeader("") -- filled in later w/ colspan
     self:AddSeparator()
@@ -189,7 +222,7 @@ local function build_tooltip(self)
         local recipe_id = table_entry["recipe_id"]
 
         if cooldown_finished_date > time() then
-            self:AddLine(Ambiguate(qualified_char_name, "all"), recipe_name, "Cooling Down")
+            self:AddLine(Ambiguate(qualified_char_name, "all"), recipe_name, build_time_delta_string(cooldown_finished_date - time()))
             self:SetCellTextColor(self:GetLineCount(), 3, 1, 0.5, 0, 1)
         else
             self:AddLine(Ambiguate(qualified_char_name, "all"), recipe_name, "Ready")
@@ -216,8 +249,6 @@ local function build_tooltip(self)
 
     -- lineNum, colNum, value[, font][, justification][, colSpan]
     self:SetCell(1, 1, "Profession Cooldowns", nil, "CENTER", 3)
-    self:SetCell(self:GetLineCount() - 1, 1, "To scan for more cooldowns,", nil, "CENTER", 3)
-    self:SetCell(self:GetLineCount(), 1, "open and close the profession skills on your characters", nil, "CENTER", 3)
 
     self:AddLine("") -- spacer
     self:AddLine("") -- filled in later w/ colspan
