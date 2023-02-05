@@ -305,6 +305,9 @@ local function coloredText(text, color, is_eligible)
 end
 
 local function set_label()
+    if UnitAffectingCombat("player") then
+      return
+    end
     local cooldowns_available = 0
     local qualified_name = get_qualified_name()
 
