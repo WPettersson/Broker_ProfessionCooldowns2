@@ -1,0 +1,15 @@
+## Interface: 90207
+## Title: Broker: Profession Cooldowns
+## Notes: Track your Transmutes, etc.
+## Author: @icbat
+## Version: 14
+## SavedVariables: icbat_bpc_cross_character_cache,icbat_bpc_character_class_name
+
+## Dependencies
+libs/LibStub.lua
+libs/CallbackHandler-1.0.lua
+libs/LibDataBroker-1.1.lua
+libs/LibQTip-1.0.lua
+
+## This addon
+Broker_ProfessionCooldowns.lua
