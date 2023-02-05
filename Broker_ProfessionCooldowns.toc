@@ -1,8 +1,8 @@
-## Interface: 90207
-## Title: Broker: Profession Cooldowns
+## Interface: 100005
+## Title: Broker: Profession Cooldowns 2
 ## Notes: Track your Transmutes, etc.
-## Author: @icbat
-## Version: 14
+## Author: @wpettersson
+## Version: 1
 ## SavedVariables: icbat_bpc_cross_character_cache,icbat_bpc_character_class_name
 
 ## Dependencies
