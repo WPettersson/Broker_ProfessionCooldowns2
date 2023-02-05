@@ -31,9 +31,9 @@ local function should_track_recipe(recipe_id)
     if recipe_info == nil or not recipe_info["learned"] then
         return false
     end
+    local seconds_left_on_cd, isDayCooldown, charges, maxCharges = C_TradeSkillUI.GetRecipeCooldown(recipe_id)
 
-    local _seconds_remaining, has_cooldown = C_TradeSkillUI.GetRecipeCooldown(recipe_id)
-    if not has_cooldown then
+    if seconds_left_on_cd == nil or seconds_left_on_cd < 1 then
         return false
     end
 
@@ -46,15 +46,6 @@ local function should_track_recipe(recipe_id)
     return true
 end
 
-local function get_profession_skill_line()
-    local line_id, _name, _, _, _, parent_line_id, parent_name = C_TradeSkillUI.GetTradeSkillLine()
-    if parent_line_id ~= nil then
-        return parent_line_id
-    end
-
-    return line_id
-end
-
 local function get_qualified_name()
     local name, realm = UnitFullName("player")
     local qualified_name = name .. "-" .. realm
@@ -63,7 +54,7 @@ end
 
 local function add_recipe_to_cache(recipe_id)
     local recipe_info = C_TradeSkillUI.GetRecipeInfo(recipe_id)
-    local seconds_left_on_cd = C_TradeSkillUI.GetRecipeCooldown(recipe_id)
+    local seconds_left_on_cd, isDayCooldown, charges, maxCharges = C_TradeSkillUI.GetRecipeCooldown(recipe_id)
     local qualified_name = get_qualified_name()
 
     if seconds_left_on_cd == nil then
@@ -75,9 +66,8 @@ local function add_recipe_to_cache(recipe_id)
         recipe_name = recipe_info["name"],
         qualified_char_name = qualified_name,
         cooldown_finished_date = seconds_left_on_cd + time(),
-        profession_id = get_profession_skill_line()
+        profession_id = C_TradeSkillUI.GetProfessionNameForSkillLineAbility(recipe_info["skillLineAbilityID"])
     }
-
     local _localized, canonical_class_name = UnitClass("player")
     icbat_bpc_character_class_name[qualified_name] = canonical_class_name
     for i, stored_recipe in ipairs(icbat_bpc_cross_character_cache) do
@@ -86,12 +76,11 @@ local function add_recipe_to_cache(recipe_id)
             return
         end
     end
-
     table.insert(icbat_bpc_cross_character_cache, recipe_to_store)
 
 end
 
-local function clear_recipe(i, recipe_info, qualified_name, profession_id)
+local function clear_recipe(i, recipe_info, qualified_name)
     -- remove old-format entries
     if recipe_info["qualified_char_name"] == nil then
         table.remove(icbat_bpc_cross_character_cache, i)
@@ -105,29 +94,21 @@ local function clear_recipe(i, recipe_info, qualified_name, profession_id)
     if recipe_info["qualified_char_name"] ~= qualified_name then
         return
     end
-
-    -- empty this profession's entries so we can reload
-    if recipe_info["profession_id"] == profession_id then
-        table.remove(icbat_bpc_cross_character_cache, i)
-    end
+    -- Remove everything for this character
+    table.remove(icbat_bpc_cross_character_cache, i)
 end
 
-local function clear_profession_cache(qualified_name, profession_id)
+local function clear_cache(qualified_name)
     for i, recipe_info in pairs(icbat_bpc_cross_character_cache) do
-        clear_recipe(i, recipe_info, qualified_name, profession_id)
+        clear_recipe(i, recipe_info, qualified_name)
     end
 end
 
 local function scan_for_recipes()
-    if C_TradeSkillUI.IsTradeSkillGuild() then
-        return
-    end
-    clear_profession_cache(get_qualified_name(), get_profession_skill_line())
+    clear_cache(get_qualified_name())
     local recipes_in_open_profession = C_TradeSkillUI.GetAllRecipeIDs()
-
     for _i, recipeID in pairs(recipes_in_open_profession) do
         local recipe_info = C_TradeSkillUI.GetRecipeInfo(recipeID)
-
         if should_track_recipe(recipeID) then
             add_recipe_to_cache(recipeID)
         end
@@ -276,13 +257,12 @@ end
 -- invisible frame for updating/hooking events
 local f = CreateFrame("frame")
 f:RegisterEvent("PLAYER_ENTERING_WORLD") -- on login
-f:RegisterEvent("TRADE_SKILL_LIST_UPDATE")
 f:RegisterEvent("NEW_RECIPE_LEARNED")
 f:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
 f:SetScript("OnEvent", set_label)
 
 local g = CreateFrame("frame")
-g:RegisterEvent("TRADE_SKILL_LIST_UPDATE")
+g:RegisterEvent("PLAYER_ENTERING_WORLD") -- on login
 g:RegisterEvent("NEW_RECIPE_LEARNED")
 g:SetScript("OnEvent", scan_for_recipes)
 
