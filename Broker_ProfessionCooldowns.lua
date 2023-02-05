@@ -4,6 +4,11 @@ local ignored_spell_ids = {169080 -- gearspring parts
 , 156587 -- alchemical catalyst
 }
 
+local profession_spells = {
+  {388213, "Mining"}, -- Overload Elemental Deposit
+  {390392, "Herbalism"} -- Overload Elemental Herb
+}
+
 ------------------------------
 --- Initialize Saved Variables
 ------------------------------
@@ -77,7 +82,41 @@ local function add_recipe_to_cache(recipe_id)
         end
     end
     table.insert(icbat_bpc_cross_character_cache, recipe_to_store)
+end
 
+
+local function add_spell_to_cache(spell_id, profession_text)
+    if not IsSpellKnown(spell_id) then
+        return
+    end
+    local spell_name = GetSpellInfo(spell_id)
+    local qualified_name = get_qualified_name()
+    local start, duration = GetSpellCooldown(spell_id)
+    local ready_at
+    if start == 0 then
+        seconds_left = -1
+        ready_at = time() - 1
+    else
+        -- For some reason, GetSpellCooldown returns time based on computer
+        -- uptime, not just a clock, so we need to adjust
+        ready_at = time() + start + duration - GetTime()
+    end
+    local recipe_to_store = {
+        recipe_id = spell_id,
+        recipe_name = spell_name,
+        qualified_char_name = qualified_name,
+        cooldown_finished_date = ready_at,
+        profession_id = profession_text
+    }
+    local _localized, canonical_class_name = UnitClass("player")
+    icbat_bpc_character_class_name[qualified_name] = canonical_class_name
+    for i, stored_recipe in ipairs(icbat_bpc_cross_character_cache) do
+        if stored_recipe["recipe_id"] == recipe_id and stored_recipe["qualified_char_name"] == qualified_name then
+            icbat_bpc_cross_character_cache[i] = recipe_to_store
+            return
+        end
+    end
+    table.insert(icbat_bpc_cross_character_cache, recipe_to_store)
 end
 
 local function clear_recipe(i, recipe_info, qualified_name)
@@ -112,6 +151,9 @@ local function scan_for_recipes()
         if should_track_recipe(recipeID) then
             add_recipe_to_cache(recipeID)
         end
+    end
+    for _, spell_details in ipairs(profession_spells) do
+        add_spell_to_cache(spell_details[1], spell_details[2])
     end
 
     table.sort(icbat_bpc_cross_character_cache, function(a, b)
