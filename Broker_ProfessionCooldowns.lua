@@ -27,6 +27,10 @@ if icbat_bpc_character_class_name == nil then
     icbat_bpc_character_class_name = {}
 end
 
+local function dprint(str)
+  print("BPCD: " .. str)
+end
+
 -----------------------
 --- Tim Allen Grunt.wav
 -----------------------
